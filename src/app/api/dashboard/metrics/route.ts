@@ -91,7 +91,7 @@ function calculateRealMetrics(sentimentData: any[], recentFeedback: any[]) {
     : 'No data collected yet'
 
   return {
-    developerSentiment: parseFloat(developerSentiment),
+    developerSentiment: parseFloat(String(developerSentiment)),
     activeDiscussions,
     criticalIssues,
     platformActivity: activePlatforms,

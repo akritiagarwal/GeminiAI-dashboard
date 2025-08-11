@@ -306,7 +306,7 @@ export default function LandingPage() {
                   <div className="text-center">
                     <Activity className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                     <p>No trending topics</p>
-                    <p className="text-sm">Topics will appear as they're detected</p>
+                    <p className="text-sm">Topics will appear as they&apos;re detected</p>
                   </div>
                 </div>
               </div>
