@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Gemini API Developer Sentiment Monitor
 
 ## 🎯 Overview
@@ -231,3 +232,7 @@ This project was built as a demonstration of rapid prototyping and product think
 
 ## 📄 License
 MIT License - see LICENSE file for details
+=======
+# GeminiAI-dashboard
+a comprehensive dashboard for PMs to stay uptodate 
+>>>>>>> 45f9b674f6a6a15dee2db2052bba02f25caf11e3
