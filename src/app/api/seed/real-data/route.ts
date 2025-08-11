@@ -87,13 +87,13 @@ export async function POST(request: NextRequest) {
       console.log(`🧠 Generating sentiment analysis for ${allFeedback.length} items`)
       for (const feedbackItem of allFeedback) {
         try {
-          const analysisResult = await geminiAnalyzer.analyzeSentiment(feedbackItem.content)
+          const analysisResult = await geminiAnalyzer.analyzeFeedback(feedbackItem.content)
           if (analysisResult) {
             const { error: sentimentError } = await supabase.from('sentiment_analysis').insert({
               feedback_id: feedbackItem.id,
               sentiment_score: analysisResult.sentiment_score,
               sentiment_label: analysisResult.sentiment_label,
-              confidence: analysisResult.confidence,
+              confidence: 0.8, // Default confidence since analyzeFeedback doesn't return it
               processing_model: 'gemini-pro',
               timestamp: new Date().toISOString()
             })
