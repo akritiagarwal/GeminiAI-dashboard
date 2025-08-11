@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Database error:', error);
       return NextResponse.json(
-        { error: 'Failed to store data in database', details: error.message },
+        { error: 'Failed to store data in database', details: error instanceof Error ? error.message : 'Unknown error' },
         { status: 500 }
       );
     }

@@ -122,8 +122,10 @@ export class DemoGenerator {
 
   async seedDemoData(scenario?: string) {
     try {
+      const supabase = await this.supabase
+      
       // Clear existing demo data
-      await this.supabase
+      await supabase
         .from('developer_feedback')
         .delete()
         .eq('is_demo', true)
@@ -131,7 +133,7 @@ export class DemoGenerator {
       const feedback = this.generateRealisticFeedback()
       
       // Insert feedback
-      const { data: insertedFeedback, error: feedbackError } = await this.supabase
+      const { data: insertedFeedback, error: feedbackError } = await supabase
         .from('developer_feedback')
         .insert(feedback.map(f => ({
           ...f,
@@ -148,7 +150,7 @@ export class DemoGenerator {
       // Generate sentiment analysis
       const sentimentData = feedback.map(f => this.generateSentimentAnalysis(f))
       
-      const { error: sentimentError } = await this.supabase
+      const { error: sentimentError } = await supabase
         .from('sentiment_analysis')
         .insert(sentimentData)
 

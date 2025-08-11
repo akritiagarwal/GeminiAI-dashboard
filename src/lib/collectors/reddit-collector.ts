@@ -81,7 +81,7 @@ export class RedditCollector {
           }
         }
       } catch (error) {
-        console.error(`Error fetching from ${subreddit}:`, error.message);
+        console.error(`Error fetching from ${subreddit}:`, error instanceof Error ? error.message : 'Unknown error');
         // Continue with next URL instead of failing completely
       }
     }
@@ -102,7 +102,7 @@ export class RedditCollector {
         }
       );
 
-      const comments = [];
+      const comments: any[] = [];
       const traverse = (comment: any, depth = 0) => {
         if (depth > 3) return; // Limit depth
         

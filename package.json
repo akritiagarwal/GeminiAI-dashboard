@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
+    "pre-push": "npm run build",
     "seed:real": "tsx scripts/seed-real-data.ts",
     "seed:simple": "tsx scripts/seed-simple.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",

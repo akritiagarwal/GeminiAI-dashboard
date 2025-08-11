@@ -123,7 +123,7 @@ export default function Dashboard() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Reddit</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {validateMetric(collectionStatus?.reddit?.totalItems, 0)}
+                    {validateMetric(collectionStatus?.reddit?.totalItems, '0')}
                   </p>
                 </div>
                 <div className={`p-2 rounded-full ${collectionStatus?.reddit?.isActive ? 'bg-green-100' : 'bg-gray-100'}`}>
@@ -142,7 +142,7 @@ export default function Dashboard() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Google Forum</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {validateMetric(collectionStatus?.google_forum?.totalItems, 0)}
+                    {validateMetric(collectionStatus?.google_forum?.totalItems, '0')}
                   </p>
                 </div>
                 <div className={`p-2 rounded-full ${collectionStatus?.google_forum?.isActive ? 'bg-green-100' : 'bg-gray-100'}`}>
@@ -161,7 +161,7 @@ export default function Dashboard() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Hacker News</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {validateMetric(collectionStatus?.hackernews?.totalItems, 0)}
+                    {validateMetric(collectionStatus?.hackernews?.totalItems, '0')}
                   </p>
                 </div>
                 <div className={`p-2 rounded-full ${collectionStatus?.hackernews?.isActive ? 'bg-green-100' : 'bg-gray-100'}`}>
@@ -212,7 +212,7 @@ export default function Dashboard() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Active Discussions</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {validateMetric(metrics?.activeDiscussions, 0)}
+                    {validateMetric(metrics?.activeDiscussions, '0')}
                   </p>
                 </div>
                 <MessageSquare className="h-6 w-6 text-blue-600" />
@@ -227,7 +227,7 @@ export default function Dashboard() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Critical Issues</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {validateMetric(metrics?.criticalIssues, 0)}
+                    {validateMetric(metrics?.criticalIssues, '0')}
                   </p>
                 </div>
                 <AlertTriangle className="h-6 w-6 text-red-600" />
@@ -244,7 +244,7 @@ export default function Dashboard() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Platform Activity</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {validateMetric(metrics?.platformActivity, 0)}
+                    {validateMetric(metrics?.platformActivity, '0')}
                   </p>
                 </div>
                 <div className="w-6 h-6 text-purple-600">
