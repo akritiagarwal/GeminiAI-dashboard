@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createEdgeClient } from '@/lib/supabase/edge'
 
 export interface MonitoringConfig {
   id: string
@@ -58,7 +58,7 @@ export class MonitoringConfigManager {
   private supabase: any
 
   constructor() {
-    this.supabase = createClient()
+    this.supabase = createEdgeClient()
   }
 
   // Keyword Management

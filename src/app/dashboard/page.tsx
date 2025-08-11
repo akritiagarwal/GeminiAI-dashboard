@@ -12,7 +12,10 @@ import {
   BarChart3,
   Target,
   Users2,
-  Settings
+  Settings,
+  Heart,
+  Smile,
+  CheckCircle
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -35,6 +38,33 @@ interface RealDataMetrics {
   topFeature: string | null
   topBug: string | null
   winRate: number | null
+}
+
+// HEART Framework Types
+export interface HEARTAnalysis {
+  feedback_id: string;
+  happiness_csat: number; // 1-5 scale (Google's CSAT)
+  engagement: number; // 1-5 scale
+  adoption: number; // 1-5 scale (1=considering, 5=advocating)
+  retention: number; // 1-5 scale
+  task_success: number; // 1-5 scale
+  overall_score: number; // Average of all 5
+  main_point: string;
+  actionable: boolean;
+  priority: 'high' | 'medium' | 'low';
+  category: 'bug' | 'feature' | 'praise' | 'question' | 'comparison' | 'unknown';
+  analyzed_at: string;
+}
+
+export interface HEARTMetrics {
+  overall_heart_score: number;
+  happiness_csat: number;
+  engagement: number;
+  adoption: number;
+  retention: number;
+  task_success: number;
+  total_analyzed: number;
+  recent_analysis: HEARTAnalysis[];
 }
 
 export default function Dashboard() {
@@ -336,6 +366,15 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Add this link to the navigation section */}
+        <Link 
+          href="/dashboard/heart" 
+          className="flex items-center gap-2 p-3 rounded-lg hover:bg-gray-100 transition-colors"
+        >
+          <Heart className="h-5 w-5 text-red-500" />
+          <span>HEART Analysis</span>
+        </Link>
       </div>
     </div>
   )

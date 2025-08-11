@@ -82,3 +82,30 @@ export interface PMActionItems {
   status: ActionStatus
   created_at: string
 } 
+
+// HEART Framework Types
+export interface HEARTAnalysis {
+  feedback_id: string;
+  happiness_csat: number; // 1-5 scale (Google's CSAT)
+  engagement: number; // 1-5 scale
+  adoption: number; // 1-5 scale (1=considering, 5=advocating)
+  retention: number; // 1-5 scale
+  task_success: number; // 1-5 scale
+  overall_score: number; // Average of all 5
+  main_point: string;
+  actionable: boolean;
+  priority: 'high' | 'medium' | 'low';
+  category: 'bug' | 'feature' | 'praise' | 'question' | 'comparison' | 'unknown';
+  analyzed_at: string;
+}
+
+export interface HEARTMetrics {
+  overall_heart_score: number;
+  happiness_csat: number;
+  engagement: number;
+  adoption: number;
+  retention: number;
+  task_success: number;
+  total_analyzed: number;
+  recent_analysis: HEARTAnalysis[];
+} 
