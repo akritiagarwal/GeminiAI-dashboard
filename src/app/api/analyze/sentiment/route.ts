@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { geminiAnalyzer } from '@/lib/ai/gemini-analyzer'
+import { GeminiAnalyzer } from '@/lib/ai/gemini-analyzer'
 import { createClient } from '@/lib/supabase/server'
 
 export const runtime = 'edge'
+
+// Create an instance of GeminiAnalyzer
+const geminiAnalyzer = new GeminiAnalyzer()
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,7 +37,10 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const results = await geminiAnalyzer.batchAnalyze(texts)
+      // Use the analyzeFeedback method for batch processing
+      const results = await Promise.all(
+        texts.map(text => geminiAnalyzer.analyzeFeedback(text))
+      )
       
       // Store results in database if feedback_ids provided
       if (feedback_ids && Array.isArray(feedback_ids)) {
@@ -42,57 +48,44 @@ export async function POST(request: NextRequest) {
         
         for (let i = 0; i < feedback_ids.length; i++) {
           const feedbackId = feedback_ids[i]
-          const sentiment = results.sentiment[i]
-          const intent = results.intents[i]
-          const painPoints = results.painPoints[i] || []
-          const featureRequests = results.featureRequests[i] || []
-          const competitorMentions = results.competitorMentions[i] || []
+          const analysis = results[i]
 
           // Store sentiment analysis
           await supabase
             .from('sentiment_analysis')
             .insert({
               feedback_id: feedbackId,
-              sentiment_score: sentiment.overall_sentiment.score,
-              sentiment_label: sentiment.overall_sentiment.label,
-              confidence: sentiment.overall_sentiment.confidence,
+              sentiment_score: analysis.sentiment_score,
+              sentiment_label: analysis.sentiment_label,
+              confidence: 0.8, // Default confidence
               processing_model: 'gemini-pro',
               metadata: {
-                technical_sentiment: sentiment.technical_sentiment,
-                business_sentiment: sentiment.business_sentiment,
-                emotional_tone: sentiment.emotional_tone,
-                comparison_context: sentiment.comparison_context,
-                actionability: sentiment.actionability,
-                developer_intent: intent,
-                pain_points: painPoints,
-                feature_requests: featureRequests,
-                competitor_mentions: competitorMentions
+                is_about_gemini: analysis.is_about_gemini,
+                apis_mentioned: analysis.apis_mentioned,
+                key_topics: analysis.key_topics,
+                is_comparison: analysis.is_comparison,
+                comparison_winner: analysis.comparison_winner,
+                actionable: analysis.actionable,
+                priority: analysis.priority
               }
             })
 
-          // Store extracted insights
-          if (painPoints.length > 0 || featureRequests.length > 0) {
+          // Store extracted insights if there are feature requests or bug reports
+          if (analysis.feature_request || analysis.bug_report) {
             await supabase
               .from('extracted_insights')
               .insert({
                 feedback_id: feedbackId,
-                insight_type: intent.primary_intent === 'feature_request' ? 'feature_request' : 'general',
-                apis_mentioned: competitorMentions.map(m => m.competitor),
-                features_mentioned: featureRequests.map(f => f.feature_name),
-                competitor_comparison: {
-                  mentions: competitorMentions,
-                  comparison_type: sentiment.comparison_context.comparison_type
-                },
+                insight_type: analysis.feature_request ? 'feature_request' : 'bug_report',
+                apis_mentioned: analysis.apis_mentioned,
+                features_mentioned: analysis.feature_request ? [analysis.feature_request] : [],
                 technical_details: {
-                  pain_points: painPoints,
-                  feature_requests: featureRequests,
-                  intent: intent
+                  feature_request: analysis.feature_request,
+                  bug_report: analysis.bug_report,
+                  praise_point: analysis.praise_point,
+                  pain_point: analysis.pain_point
                 },
-                priority_score: Math.max(
-                  ...painPoints.map(p => p.severity === 'critical' ? 10 : p.severity === 'high' ? 8 : p.severity === 'medium' ? 5 : 3),
-                  ...featureRequests.map(f => f.priority === 'critical' ? 10 : f.priority === 'high' ? 8 : f.priority === 'medium' ? 5 : 3),
-                  5
-                )
+                priority_score: analysis.priority === 'high' ? 10 : analysis.priority === 'medium' ? 5 : 3
               })
           }
         }
@@ -103,24 +96,12 @@ export async function POST(request: NextRequest) {
         message: 'Batch sentiment analysis completed',
         data: {
           total_analyzed: texts.length,
-          results: {
-            sentiment: results.sentiment,
-            intents: results.intents,
-            painPoints: results.painPoints,
-            featureRequests: results.featureRequests,
-            competitorMentions: results.competitorMentions
-          }
+          results: results
         }
       })
     } else {
       // Single text analysis
-      const [sentiment, intent, painPoints, featureRequests, competitorMentions] = await Promise.all([
-        geminiAnalyzer.analyzeSentiment(text),
-        geminiAnalyzer.extractDeveloperIntent(text),
-        geminiAnalyzer.identifyPainPoints(text),
-        geminiAnalyzer.extractFeatureRequests(text),
-        geminiAnalyzer.detectCompetitorMentions(text)
-      ])
+      const analysis = await geminiAnalyzer.analyzeFeedback(text)
 
       // Store results in database if feedback_id provided
       if (feedback_id) {
@@ -131,46 +112,37 @@ export async function POST(request: NextRequest) {
           .from('sentiment_analysis')
           .insert({
             feedback_id: feedback_id,
-            sentiment_score: sentiment.overall_sentiment.score,
-            sentiment_label: sentiment.overall_sentiment.label,
-            confidence: sentiment.overall_sentiment.confidence,
+            sentiment_score: analysis.sentiment_score,
+            sentiment_label: analysis.sentiment_label,
+            confidence: 0.8, // Default confidence
             processing_model: 'gemini-pro',
             metadata: {
-              technical_sentiment: sentiment.technical_sentiment,
-              business_sentiment: sentiment.business_sentiment,
-              emotional_tone: sentiment.emotional_tone,
-              comparison_context: sentiment.comparison_context,
-              actionability: sentiment.actionability,
-              developer_intent: intent,
-              pain_points: painPoints,
-              feature_requests: featureRequests,
-              competitor_mentions: competitorMentions
+              is_about_gemini: analysis.is_about_gemini,
+              apis_mentioned: analysis.apis_mentioned,
+              key_topics: analysis.key_topics,
+              is_comparison: analysis.is_comparison,
+              comparison_winner: analysis.comparison_winner,
+              actionable: analysis.actionable,
+              priority: analysis.priority
             }
           })
 
-        // Store extracted insights
-        if (painPoints.length > 0 || featureRequests.length > 0) {
+        // Store extracted insights if there are feature requests or bug reports
+        if (analysis.feature_request || analysis.bug_report) {
           await supabase
             .from('extracted_insights')
             .insert({
               feedback_id: feedback_id,
-              insight_type: intent.primary_intent === 'feature_request' ? 'feature_request' : 'general',
-              apis_mentioned: competitorMentions.map(m => m.competitor),
-              features_mentioned: featureRequests.map(f => f.feature_name),
-              competitor_comparison: {
-                mentions: competitorMentions,
-                comparison_type: sentiment.comparison_context.comparison_type
-              },
+              insight_type: analysis.feature_request ? 'feature_request' : 'bug_report',
+              apis_mentioned: analysis.apis_mentioned,
+              features_mentioned: analysis.feature_request ? [analysis.feature_request] : [],
               technical_details: {
-                pain_points: painPoints,
-                feature_requests: featureRequests,
-                intent: intent
+                feature_request: analysis.feature_request,
+                bug_report: analysis.bug_report,
+                praise_point: analysis.praise_point,
+                pain_point: analysis.pain_point
               },
-              priority_score: Math.max(
-                ...painPoints.map(p => p.severity === 'critical' ? 10 : p.severity === 'high' ? 8 : p.severity === 'medium' ? 5 : 3),
-                ...featureRequests.map(f => f.priority === 'critical' ? 10 : f.priority === 'high' ? 8 : f.priority === 'medium' ? 5 : 3),
-                5
-              )
+              priority_score: analysis.priority === 'high' ? 10 : analysis.priority === 'medium' ? 5 : 3
             })
         }
       }
@@ -179,18 +151,13 @@ export async function POST(request: NextRequest) {
         success: true,
         message: 'Sentiment analysis completed',
         data: {
-          sentiment,
-          intent,
-          painPoints,
-          featureRequests,
-          competitorMentions,
+          analysis,
           summary: {
-            overall_sentiment: sentiment.overall_sentiment.label,
-            confidence: sentiment.overall_sentiment.confidence,
-            primary_intent: intent.primary_intent,
-            pain_points_count: painPoints.length,
-            feature_requests_count: featureRequests.length,
-            competitors_mentioned: competitorMentions.length
+            sentiment: analysis.sentiment_label,
+            score: analysis.sentiment_score,
+            is_about_gemini: analysis.is_about_gemini,
+            actionable: analysis.actionable,
+            priority: analysis.priority
           }
         }
       })
