@@ -7,46 +7,42 @@ export async function GET() {
   try {
     const supabase = await createClient()
 
-    // Get recent feedback data
-    const { data: feedbackData, error: feedbackError } = await supabase
-      .from('developer_feedback')
-      .select('*')
-      .order('timestamp', { ascending: false })
-      .limit(50)
+    // Get sentiment analysis data from the last 7 days
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    
+    const { data: sentimentAnalysis, error: sentimentError } = await supabase
+      .from('sentiment_analysis')
+      .select(`
+        *,
+        developer_feedback (
+          id,
+          content,
+          platform,
+          author,
+          timestamp,
+          metadata
+        )
+      `)
+      .gte('analyzed_at', sevenDaysAgo)
+      .order('analyzed_at', { ascending: false })
 
-    if (feedbackError) {
-      console.error('Error fetching feedback data:', feedbackError)
-      return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 })
+    if (sentimentError) {
+      console.error('Error fetching sentiment analysis:', sentimentError)
+      return NextResponse.json({ error: 'Failed to fetch sentiment data' }, { status: 500 })
     }
 
-    // Generate mock sentiment data based on content analysis
-    const sentimentData = feedbackData?.map(item => {
-      const content = item.content?.toLowerCase() || ''
-      let sentiment = 0.5 // neutral default
-      
-      // Simple sentiment analysis based on keywords
-      const positiveWords = ['great', 'awesome', 'excellent', 'good', 'love', 'amazing', 'perfect', 'working', 'solved']
-      const negativeWords = ['bug', 'error', 'issue', 'problem', 'broken', 'fail', 'crash', 'wrong', 'bad', 'terrible']
-      
-      const positiveCount = positiveWords.filter(word => content.includes(word)).length
-      const negativeCount = negativeWords.filter(word => content.includes(word)).length
-      
-      if (positiveCount > negativeCount) {
-        sentiment = 0.7 + (positiveCount - negativeCount) * 0.1
-      } else if (negativeCount > positiveCount) {
-        sentiment = 0.3 - (negativeCount - positiveCount) * 0.1
-      }
-      
-      return {
-        id: item.id,
-        platform: item.platform,
-        content: item.content,
-        author: item.author,
-        sentiment: Math.max(0, Math.min(1, sentiment)),
-        timestamp: item.timestamp,
-        metadata: item.metadata
-      }
-    }) || []
+    // Transform the data for the frontend
+    const sentimentData = sentimentAnalysis?.map(item => ({
+      id: item.feedback_id,
+      platform: item.developer_feedback?.platform || 'unknown',
+      content: item.developer_feedback?.content || '',
+      author: item.developer_feedback?.author || 'unknown',
+      sentiment: item.sentiment_score || 0.5,
+      sentiment_label: item.sentiment_label || 'neutral',
+      timestamp: item.developer_feedback?.timestamp || item.analyzed_at,
+      metadata: item.developer_feedback?.metadata || {},
+      confidence: item.confidence || 0.8
+    })) || []
 
     // Calculate platform sentiment
     const platformSentiment = sentimentData.reduce((acc, item) => {
@@ -69,11 +65,36 @@ export async function GET() {
       ? sentimentData.reduce((sum, item) => sum + item.sentiment, 0) / sentimentData.length 
       : 0.5
 
+    // Get sentiment trends over time (last 7 days)
+    const dailySentiment = sentimentData.reduce((acc, item) => {
+      const date = new Date(item.timestamp).toDateString()
+      if (!acc[date]) {
+        acc[date] = { total: 0, count: 0 }
+      }
+      acc[date].total += item.sentiment
+      acc[date].count += 1
+      return acc
+    }, {} as Record<string, { total: number, count: number }>)
+
+    const sentimentTrend = Object.entries(dailySentiment)
+      .map(([date, data]) => ({
+        date,
+        averageSentiment: data.count > 0 ? data.total / data.count : 0.5,
+        count: data.count
+      }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
     return NextResponse.json({
       overallSentiment,
       platformSentiment: platformAverages,
       recentSentiment: sentimentData.slice(0, 10),
-      totalAnalyzed: sentimentData.length
+      sentimentTrend,
+      totalAnalyzed: sentimentData.length,
+      sentimentBreakdown: {
+        positive: sentimentData.filter(item => item.sentiment >= 0.7).length,
+        neutral: sentimentData.filter(item => item.sentiment >= 0.4 && item.sentiment < 0.7).length,
+        negative: sentimentData.filter(item => item.sentiment < 0.4).length
+      }
     })
 
   } catch (error) {

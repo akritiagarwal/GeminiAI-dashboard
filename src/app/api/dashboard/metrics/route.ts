@@ -7,8 +7,8 @@ export async function GET() {
   try {
     const supabase = await createClient()
     
-    // Get data from last 48 hours
-    const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+    // Get data from last 7 days for better coverage
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
     
     // Get all feedback with sentiment analysis
     const { data: sentimentData, error: sentimentError } = await supabase
@@ -19,7 +19,7 @@ export async function GET() {
         feedback_id,
         analyzed_at
       `)
-      .gte('analyzed_at', twoDaysAgo)
+      .gte('analyzed_at', sevenDaysAgo)
 
     if (sentimentError) {
       console.error('Error fetching sentiment data:', sentimentError)
@@ -29,16 +29,26 @@ export async function GET() {
     // Get recent feedback for activity metrics
     const { data: recentFeedback, error: feedbackError } = await supabase
       .from('developer_feedback')
-      .select('platform, timestamp')
-      .gte('timestamp', twoDaysAgo)
+      .select('platform, timestamp, content, metadata')
+      .gte('timestamp', sevenDaysAgo)
 
     if (feedbackError) {
       console.error('Error fetching feedback data:', feedbackError)
       return NextResponse.json({ error: 'Failed to fetch feedback data' }, { status: 500 })
     }
 
+    // Get extracted insights to identify actual bug reports
+    const { data: insightsData, error: insightsError } = await supabase
+      .from('extracted_insights')
+      .select('feedback_id, insight_type, technical_details')
+      .gte('created_at', sevenDaysAgo)
+
+    if (insightsError) {
+      console.error('Error fetching insights data:', insightsError)
+    }
+
     // Calculate real metrics
-    const metrics = calculateRealMetrics(sentimentData || [], recentFeedback || [])
+    const metrics = calculateRealMetrics(sentimentData || [], recentFeedback || [], insightsData || [])
     
     return NextResponse.json(metrics)
     
@@ -51,7 +61,7 @@ export async function GET() {
   }
 }
 
-function calculateRealMetrics(sentimentData: any[], recentFeedback: any[]) {
+function calculateRealMetrics(sentimentData: any[], recentFeedback: any[], insightsData: any[]) {
   // Developer Sentiment Score (weighted average)
   const validScores = sentimentData
     .filter(item => item.sentiment_score !== null && !isNaN(item.sentiment_score))
@@ -67,10 +77,18 @@ function calculateRealMetrics(sentimentData: any[], recentFeedback: any[]) {
     new Date(item.timestamp) > oneDayAgo
   ).length
 
-  // Critical Issues (negative sentiment)
-  const criticalIssues = sentimentData.filter(item => 
+  // Critical Issues (actual bug reports from last 7 days)
+  const bugReports = insightsData.filter(insight => 
+    insight.insight_type === 'bug_report' || 
+    (insight.technical_details?.bug_report && insight.technical_details.bug_report.length > 0)
+  ).length
+
+  // Also count negative sentiment items as potential issues
+  const negativeSentiment = sentimentData.filter(item => 
     item.sentiment_label === 'negative'
   ).length
+
+  const criticalIssues = bugReports + Math.floor(negativeSentiment * 0.3) // Weight negative sentiment as potential issues
 
   // Platform Activity (unique platforms with recent data)
   const activePlatforms = new Set(
@@ -96,6 +114,8 @@ function calculateRealMetrics(sentimentData: any[], recentFeedback: any[]) {
     criticalIssues,
     platformActivity: activePlatforms,
     dataFreshness,
-    totalAnalyzed: sentimentData.length
+    totalAnalyzed: sentimentData.length,
+    bugReports,
+    negativeSentiment
   }
 } 

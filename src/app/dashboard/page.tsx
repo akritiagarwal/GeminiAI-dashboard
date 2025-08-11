@@ -233,7 +233,7 @@ export default function Dashboard() {
                 <AlertTriangle className="h-6 w-6 text-red-600" />
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                {metrics?.criticalIssues === 0 ? 'No critical issues' : 'Requires attention'}
+                {metrics?.criticalIssues === 0 ? 'No critical issues' : 'Bugs reported in last 7 days'}
               </p>
             </CardContent>
           </Card>
